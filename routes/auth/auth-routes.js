@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const {
   registerUser,
@@ -11,8 +12,9 @@ const router = express.Router();
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/logout", logoutUser);
+
 router.get("/check-auth", (req, res) => {
-  const token = req.cookies.token;
+  const token = req.cookies?.token;
 
   if (!token) {
     return res.json({
@@ -37,5 +39,6 @@ router.get("/check-auth", (req, res) => {
     });
   }
 });
+
 
 module.exports = router;
