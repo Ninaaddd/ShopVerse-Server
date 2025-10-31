@@ -68,6 +68,7 @@ const loginUser = async (req, res) => {
       httpOnly: true,
       secure: true, // use true in production (HTTPS)
       sameSite: "None",
+      path: "/", // <-- make sure this is set
       maxAge: 60 * 60 * 1000, // 1 hour
     });
     console.log(`created cookie: ${token}`)
