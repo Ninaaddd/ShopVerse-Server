@@ -70,6 +70,7 @@ const loginUser = async (req, res) => {
       sameSite: "None",
       maxAge: 60 * 60 * 1000, // 1 hour
     });
+    console.log(`created cookie: ${token}`)
 
     res.status(200).json({
       success: true,
@@ -108,6 +109,7 @@ const logoutUser = (req, res) => {
 // AUTH MIDDLEWARE (Protect Routes)
 const authMiddleware = (req, res, next) => {
   const token = req.cookies?.token;
+  console.log(`Middleware cookie:${token}`)
   if (!token)
     return res.status(401).json({
       success: false,
