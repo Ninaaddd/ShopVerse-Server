@@ -30,7 +30,6 @@ const PORT = process.env.PORT || 5000;
 const allowedOrigins = [
   "https://shopverse-kmmo.onrender.com",
   "https://myshopverse.vercel.app",
-  "http://localhost:3000", // for local development
 ];
 
 app.use(
