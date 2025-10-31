@@ -85,7 +85,7 @@ const loginUser = async (req, res) => {
     console.error(error);
     res.status(500).json({
       success: false,
-      message: "Server error during login.",
+      message: `Server error during login. ${error}`,
     });
   }
 };
