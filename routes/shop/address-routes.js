@@ -11,8 +11,8 @@ const { authMiddleware } = require("../../controllers/auth/auth-controller");
 const router = express.Router();
 
 router.post("/add", authMiddleware,addAddress);
-router.get("/get/:userId", authMiddleware,fetchAllAddress);
-router.delete("/delete/:userId/:addressId", authMiddleware,deleteAddress);
-router.put("/update/:userId/:addressId", authMiddleware,editAddress);
+router.get("/get", authMiddleware,fetchAllAddress);
+router.delete("/delete/:addressId", authMiddleware,deleteAddress);
+router.put("/update/:addressId", authMiddleware,editAddress);
 
 module.exports = router;
