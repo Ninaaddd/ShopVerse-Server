@@ -5,20 +5,39 @@ const Product = require("../../models/Product");
 
 const createOrder = async (req, res) => {
   try {
-    const {
-      userId,
-      cartItems,
-      addressInfo,
-      orderStatus,
-      paymentMethod,
-      paymentStatus,
-      totalAmount,
-      orderDate,
-      orderUpdateDate,
-      paymentId,
-      payerId,
-      cartId,
-    } = req.body;
+    const userId = req.user?.id;
+
+    if (!userId) return res.status(401).json({ success:false, message: 'Unauthenticated' });
+
+    if (req.body.userId || req.body.cartItems || req.body.totalAmount) {
+  return res.status(400).json({ success: false, message: "Invalid payload" });
+  }
+
+
+    // Fetch cart server-side
+    const cart = await Cart.findOne({ userId }).populate('items.productId');
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ success:false, message: 'Cart is empty' });
+    }
+
+    // Build items list and compute total from DB product prices
+    const itemsForPaypal = cart.items.map(it => {
+      const prod = it.productId;
+      return {
+        name: prod.title,
+        sku: prod._id.toString(),
+        price: prod.price.toFixed(2),
+        currency: "USD",
+        quantity: it.quantity,
+      };
+    });
+
+    const totalAmount = cart.items.reduce((sum, it) => {
+      const price = Number(it.productId.price);
+      return sum + price * it.quantity;
+    }, 0);
+
+    const { addressInfo } = req.body;
 
     const create_payment_json = {
       intent: "sale",
@@ -32,45 +51,39 @@ const createOrder = async (req, res) => {
       transactions: [
         {
           item_list: {
-            items: cartItems.map((item) => ({
-              name: item.title,
-              sku: item.productId,
-              price: item.price.toFixed(2),
-              currency: "USD",
-              quantity: item.quantity,
-            })),
-          },
-          amount: {
-            currency: "USD",
-            total: totalAmount.toFixed(2),
-          },
-          description: "description",
+            items: itemsForPaypal },
+          amount: { currency: "USD", total: totalAmount.toFixed(2) },
+          description: `Order for user ${userId}`,
         },
       ],
     };
 
     paypal.payment.create(create_payment_json, async (error, paymentInfo) => {
       if (error) {
-        console.log(error);
+        console.error(error);
 
         return res.status(500).json({
           success: false,
           message: "Error while creating paypal payment",
         });
-      } else {
-        const newlyCreatedOrder = new Order({
-          userId,
-          cartId,
-          cartItems,
+      } 
+        
+      const newlyCreatedOrder = new Order({
+        userId,
+        cartId: cart._id,
+        cartItems: cart.items.map((it) => ({
+          productId: it.productId._id,
+          title: it.productId.title,
+          quantity: it.quantity,
+          price: it.productId.price,
+        })),
           addressInfo,
-          orderStatus,
-          paymentMethod,
-          paymentStatus,
+          orderStatus: "pending",
+          paymentMethod: "paypal",
+          paymentStatus: "pending",
           totalAmount,
-          orderDate,
-          orderUpdateDate,
-          paymentId,
-          payerId,
+          orderDate: new Date(),
+          orderUpdateDate: new Date(),
         });
 
         await newlyCreatedOrder.save();
@@ -79,12 +92,11 @@ const createOrder = async (req, res) => {
           (link) => link.rel === "approval_url"
         ).href;
 
-        res.status(201).json({
+        return res.status(201).json({
           success: true,
           approvalURL,
           orderId: newlyCreatedOrder._id,
         });
-      }
     });
   } catch (e) {
     console.log(e);
