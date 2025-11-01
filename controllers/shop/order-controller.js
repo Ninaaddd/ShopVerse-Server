@@ -161,7 +161,7 @@ const capturePayment = async (req, res) => {
 
 const getAllOrdersByUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user?.id;
 
     const orders = await Order.find({ userId });
 
