@@ -15,7 +15,10 @@ async function imageUploadUtil(file) {
     resource_type: "auto",
   });
 
-  return result;
+  return {
+    ...result,
+    url: result.secure_url, // 🔒 ensures https:// is always used
+  };
 }
 
 const upload = multer({ storage });
