@@ -6,11 +6,12 @@ const {
   logoutUser,
   authMiddleware,
 } = require("../../controllers/auth/auth-controller");
+const { loginRateLimiter } = require("../../controllers/rateLimit")
 
 const router = express.Router();
 
 router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/login", loginRateLimiter, loginUser);
 router.post("/logout", authMiddleware, logoutUser);
 
 router.get("/check-auth", (req, res) => {
