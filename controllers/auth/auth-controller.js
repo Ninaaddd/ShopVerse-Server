@@ -56,7 +56,7 @@ const loginUser = async (req, res) => {
     const token = jwt.sign(
       {
         id: user._id,
-        role: "user",
+        role: user.role,
         email: user.email,
         userName: user.userName,
       },
@@ -78,6 +78,7 @@ const loginUser = async (req, res) => {
       message: "Logged in successfully.",
       user: {
         id: user._id,
+        role: user.role,
         email: user.email,
         userName: user.userName,
       },
@@ -107,26 +108,52 @@ const logoutUser = (req, res) => {
 
 
 // AUTH MIDDLEWARE (Protect Routes)
-const authMiddleware = (req, res, next) => {
+// const authMiddleware = (req, res, next) => {
+//   const token = req.cookies?.token;
+//   console.log(`Middleware cookie:${token}`)
+//   if (!token)
+//     return res.status(401).json({
+//       success: false,
+//       message: "Unauthorised user!",
+//     });
+
+//   try {
+//     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+//     req.user = decoded;
+//     next();
+//   } catch (error) {
+//     res.status(403).json({
+//       success: false,
+//       message: "Unauthorised user!",
+//     });
+//   }
+// };
+
+
+const authMiddleware = async (req, res, next) => {
   const token = req.cookies?.token;
-  console.log(`Middleware cookie:${token}`)
-  if (!token)
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorised user!",
-    });
+  if (!token) return res.status(401).json({ success: false, message: "Unauthorised user!" });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    // Fetch authoritative user record from DB
+    const userFromDb = await User.findById(decoded.id).select("+role");
+    if (!userFromDb) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    // Attach DB user and token-decoded user
+    req.user = {
+      id: userFromDb._id.toString(),
+      email: userFromDb.email,
+      userName: userFromDb.userName,
+      role: userFromDb.role, // authoritative role
+    };
     next();
-  } catch (error) {
-    res.status(403).json({
-      success: false,
-      message: "Unauthorised user!",
-    });
+  } catch (err) {
+    return res.status(403).json({ success: false, message: "Unauthorised user!" });
   }
 };
 
 module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
-
