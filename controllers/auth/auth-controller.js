@@ -71,7 +71,7 @@ const loginUser = async (req, res) => {
       path: "/", // <-- make sure this is set
       maxAge: 60 * 60 * 1000, // 1 hour
     });
-    console.log(`created cookie: ${token}`)
+    // console.log(`created cookie: ${token}`)
 
     res.status(200).json({
       success: true,
