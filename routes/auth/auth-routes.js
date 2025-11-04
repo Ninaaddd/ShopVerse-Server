@@ -56,7 +56,7 @@ router.get("/check-auth", async(req, res) => {
       },
     });
   } catch (error) {
-    console.error("error authentication",err.message);
+    console.error("error authentication",error.message);
     res.json({
       success: false,
       message: "Invalid or expired token",
