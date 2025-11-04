@@ -42,9 +42,9 @@ router.get("/check-auth", async(req, res) => {
       message: "Authenticated user!",
       user: {
         id: userFromDb._id,
+        role: userFromDb.role,
         email: userFromDb.email,
         userName: userFromDb.userName,
-        role: userFromDb.role,
       },
     });
   } catch (error) {
