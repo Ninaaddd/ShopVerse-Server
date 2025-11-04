@@ -29,12 +29,9 @@ router.get("/check-auth", async(req, res) => {
   }
 
   try {
-    try{
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log("Decoded token:", decoded);
-    }catch(err){
-      console.error("JWT Verfication failed: ",err.message);
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Decoded token:", decoded);
+    console.error("JWT Verfication failed: ",err.message);
     const userFromDb = await User.findById(decoded.id).select("+role");
 
     if (!userFromDb) {
