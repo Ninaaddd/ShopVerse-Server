@@ -14,7 +14,7 @@ router.post("/register", registerUser);
 router.post("/login", loginRateLimiter, loginUser);
 router.post("/logout", authMiddleware, logoutUser);
 
-router.get("/check-auth", (req, res) => {
+router.get("/check-auth", async(req, res) => {
   const token = req.cookies?.token;
 
   if (!token) {
