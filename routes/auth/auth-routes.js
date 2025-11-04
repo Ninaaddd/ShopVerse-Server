@@ -27,10 +27,25 @@ router.get("/check-auth", (req, res) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "CLIENT_SECRET_KEY");
+    const userFromDb = await User.findById(decoded.id);
+
+    if (!userFromDb) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found",
+        user: null,
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "Authenticated user!",
-      user: decoded,
+      user: {
+        id: userFromDb._id,
+        email: userFromDb.email,
+        userName: userFromDb.userName,
+        role: userFromDb.role,
+      },
     });
   } catch (error) {
     res.json({

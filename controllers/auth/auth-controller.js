@@ -66,8 +66,8 @@ const loginUser = async (req, res) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true, // use true in production (HTTPS)
-      sameSite: "None",
+      secure: process.env.NODE_ENV === "prod", // use true in production (HTTPS)
+      sameSite: process.env.NODE_ENV == "prod" ? "None" : "Lax",
       path: "/", // <-- make sure this is set
       maxAge: 60 * 60 * 1000, // 1 hour
     });
@@ -78,7 +78,7 @@ const loginUser = async (req, res) => {
       message: "Logged in successfully.",
       user: {
         id: user._id,
-        role: user.role,
+        // role: user.role,
         email: user.email,
         userName: user.userName,
       },

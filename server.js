@@ -34,6 +34,10 @@ const allowedOrigins = [
   "https://myshopverse.vercel.app",
 ];
 
+if (process.env.NODE_ENV === "dev"){
+  allowedOrigins.push("http://localhost:5173")
+}
+
 app.use(
   cors({
     origin: function (origin, callback) {

@@ -1,36 +1,23 @@
-// middleware/adminMiddleware.js
 const jwt = require("jsonwebtoken");
 const User = require("../../models/User");
 
 const adminMiddleware = async (req, res, next) => {
-  const token = req.cookies?.token;
-  if (!token) return res.status(401).json({ success: false, message: "Unauthorised user!" });
-
   try {
+    const token = req.cookies?.token;
+    if (!token) return res.status(401).json({ success: false, message: "No token" });
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id);
 
-    const userFromDb = await User.findById(decoded.id);
-    if (!userFromDb) return res.status(401).json({ success: false, message: "User not found" });
-
-    // Optionally check tokenVersion
-    if (decoded.tokenVersion !== userFromDb.tokenVersion) {
-      return res.status(401).json({ success: false, message: "Session invalidated" });
+    if (!user || user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden: Admin access required" });
     }
 
-    if (userFromDb.role !== "admin") {
-      return res.status(403).json({ success: false, message: "Forbidden: admin only" });
-    }
-
-    req.user = {
-      id: userFromDb._id.toString(),
-      role: userFromDb.role,
-      userName: userFromDb.userName,
-      email: userFromDb.email
-    };
+    req.user = user;
     next();
   } catch (err) {
-    return res.status(403).json({ success: false, message: "Unauthorised user!" });
+    return res.status(403).json({ success: false, message: "Invalid or expired token" });
   }
 };
 
-module.exports = adminMiddleware;
+module.exports = { adminMiddleware };
