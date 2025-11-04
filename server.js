@@ -38,6 +38,8 @@ if (process.env.NODE_ENV === "dev"){
   allowedOrigins.push("http://localhost:5173")
 }
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -60,8 +62,6 @@ app.use(
     credentials: true,
   })
 );
-
-app.set("trust proxy", 1);
 
 const globalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute

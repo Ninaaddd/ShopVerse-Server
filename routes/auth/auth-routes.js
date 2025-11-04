@@ -35,7 +35,7 @@ router.get("/check-auth", async(req, res) => {
     }catch(err){
       console.error("JWT Verfication failed: ",err.message);
     }
-    const userFromDb = await User.findById(decoded.id);
+    const userFromDb = await User.findById(decoded.id).select("+role");
 
     if (!userFromDb) {
       return res.status(401).json({
@@ -49,7 +49,7 @@ router.get("/check-auth", async(req, res) => {
       success: true,
       message: "Authenticated user!",
       user: {
-        id: userFromDb._id,
+        id: userFromDb._id.toString(),
         role: userFromDb.role,
         email: userFromDb.email,
         userName: userFromDb.userName,
