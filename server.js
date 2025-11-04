@@ -16,6 +16,8 @@ const shopSearchRouter = require("./routes/shop/search-routes");
 const shopReviewRouter = require("./routes/shop/review-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
 
+const { adminMiddleware } = require("./controllers/admin/admin-middleware");
+
 //create a database connection -> u can also
 //create a separate file for this and then import/use that file here
 const mongoURI = `mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PASS}@${process.env.MONGODB_CLUSTER}/`
@@ -64,8 +66,8 @@ app.use(globalLimiter);
 app.use(cookieParser());
 app.use(express.json());
 app.use("/api/auth", authRouter);
-app.use("/api/admin/products", adminProductsRouter);
-app.use("/api/admin/orders", adminOrderRouter);
+app.use("/api/admin/products", adminMiddleware, adminProductsRouter);
+app.use("/api/admin/orders", adminMiddleware, adminOrderRouter);
 
 app.use("/api/shop/products", shopProductsRouter);
 app.use("/api/shop/cart", shopCartRouter);
