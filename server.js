@@ -34,24 +34,39 @@ const allowedOrigins = [
   "https://myshopverse.vercel.app",
 ];
 
-if (process.env.NODE_ENV === "dev"){
-  allowedOrigins.push("http://localhost:5173")
+if (process.env.NODE_ENV === "development") {
+  allowedOrigins.push("http://localhost:5173");
 }
+console.log("NODE_ENV =", process.env.NODE_ENV);
 
 app.set("trust proxy", 1);
 
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
+    origin: (origin, callback) => {
+      // Allow non-browser clients (Postman, curl, server-to-server)
       if (!origin) return callback(null, true);
+
+      // ✅ DEV MODE: allow everything
+      if (process.env.NODE_ENV === "development ") {
+        return callback(null, true);
+      }
+
+      // ✅ PROD MODE: strict allowlist
+      const allowedOrigins = [
+        "https://shopverse-kmmo.onrender.com",
+        "https://myshopverse.vercel.app",
+      ];
+
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
-      } else {
-        return callback(new Error("Not allowed by CORS"));
       }
+
+      console.warn("Blocked by CORS:", origin);
+      return callback(null, false);
     },
-    methods: ["GET", "POST", "DELETE", "PUT"],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
       "Authorization",
@@ -59,9 +74,10 @@ app.use(
       "Expires",
       "Pragma",
     ],
-    credentials: true,
   })
 );
+
+
 
 const globalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
