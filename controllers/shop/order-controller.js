@@ -3,6 +3,13 @@ const Order = require("../../models/Order");
 const Cart = require("../../models/Cart");
 const Product = require("../../models/Product");
 
+const FRONTEND_URL = process.env.FRONTEND_URL;
+
+if (!FRONTEND_URL) {
+  throw new Error("FRONTEND_URL is not defined in backend environment variables");
+}
+
+
 const createOrder = async (req, res) => {
   try {
     const userId = req.user?.id;
@@ -45,8 +52,8 @@ const createOrder = async (req, res) => {
         payment_method: "paypal",
       },
       redirect_urls: {
-        return_url: "https://shopverse-kmmo.onrender.com:5173/shop/paypal-return",
-        cancel_url: "https://shopverse-kmmo.onrender.com:5173/shop/paypal-cancel",
+        return_url: `${FRONTEND_URL}/shop/paypal-return`,
+        cancel_url: `${FRONTEND_URL}/shop/paypal-cancel`,
       },
       transactions: [
         {
