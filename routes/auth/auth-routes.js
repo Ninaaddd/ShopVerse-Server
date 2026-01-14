@@ -18,12 +18,12 @@ router.get("/check-auth", authenticate, (req, res) => {
   res.status(200).json({
     success: true,
     message: "Authenticated user",
-    // user: {
-    //   // id: req.user.id,
-    //   email: req.user.email,
-    //   userName: req.user.userName,
+    user: {
+      // id: req.user.id,
+      email: req.user.email,
+      userName: req.user.userName,
     //   // deliberately NO role
-    // },
+    },
   });
 });
 
