@@ -77,7 +77,7 @@ const loginUser = async (req, res) => {
       success: true,
       message: "Logged in successfully.",
       user: {
-        id: user._id,
+        // id: user._id,
         // role: user.role,
         email: user.email,
         userName: user.userName,
@@ -107,31 +107,4 @@ const logoutUser = (req, res) => {
 };
 
 
-
-const authMiddleware = async (req, res, next) => {
-  const token = req.cookies?.token;
-  if (!token) return res.status(401).json({ success: false, message: "Unauthorised user!" });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Fetch authoritative user record from DB
-    const userFromDb = await User.findById(decoded.id).select("+role");
-    if (!userFromDb) {
-      return res.status(401).json({ success: false, message: "User not found" });
-    }
-
-    // Attach DB user and token-decoded user
-    req.user = {
-      id: userFromDb._id.toString(),
-      email: userFromDb.email,
-      userName: userFromDb.userName,
-      role: userFromDb.role, // authoritative role
-    };
-    next();
-  } catch (err) {
-    return res.status(403).json({ success: false, message: "Unauthorised user!" });
-  }
-};
-
-module.exports = { registerUser, loginUser, logoutUser, authMiddleware };
+module.exports = { registerUser, loginUser, logoutUser };

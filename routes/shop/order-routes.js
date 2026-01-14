@@ -6,13 +6,13 @@ const {
   getOrderDetails,
   capturePayment,
 } = require("../../controllers/shop/order-controller");
-const { authMiddleware } = require("../../controllers/auth/auth-controller");
+const { authenticate } = require("../../middlewares/auth");
 
 const router = express.Router();
 
-router.post("/create", authMiddleware,createOrder);
-router.post("/capture", authMiddleware,capturePayment);
-router.get("/list/", authMiddleware, getAllOrdersByUser);
-router.get("/details/:id", authMiddleware, getOrderDetails);
+router.post("/create", authenticate,createOrder);
+router.post("/capture", authenticate,capturePayment);
+router.get("/list/", authenticate, getAllOrdersByUser);
+router.get("/details/:id", authenticate, getOrderDetails);
 
 module.exports = router;

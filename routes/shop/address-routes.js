@@ -6,13 +6,13 @@ const {
   editAddress,
   deleteAddress,
 } = require("../../controllers/shop/address-controller");
-const { authMiddleware } = require("../../controllers/auth/auth-controller");
+const { authenticate } = require("../../middlewares/auth");
 
 const router = express.Router();
 
-router.post("/add", authMiddleware,addAddress);
-router.get("/get", authMiddleware,fetchAllAddress);
-router.delete("/delete/:addressId", authMiddleware,deleteAddress);
-router.put("/update/:addressId", authMiddleware,editAddress);
+router.post("/add", authenticate,addAddress);
+router.get("/get", authenticate,fetchAllAddress);
+router.delete("/delete/:addressId", authenticate,deleteAddress);
+router.put("/update/:addressId", authenticate,editAddress);
 
 module.exports = router;

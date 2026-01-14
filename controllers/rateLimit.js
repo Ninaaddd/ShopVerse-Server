@@ -1,16 +1,23 @@
 const rateLimit = require("express-rate-limit");
+const { ipKeyGenerator } = rateLimit;
+
 
 // Login-specific limiter
 const loginRateLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 login requests per windowMs
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  keyGenerator: (req) => {
+    const ip = ipKeyGenerator(req);
+    const email = req.body?.email || "unknown";
+    return `${ip}:${email}`;
+  },
   message: {
     success: false,
-    message:
-      "Too many login attempts from this IP, please try again after 15 minutes.",
+    message: "Too many login attempts. Please try again later.",
   },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false,  // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
 });
+
 
 module.exports = { loginRateLimiter };

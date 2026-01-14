@@ -6,13 +6,13 @@ const {
   deleteCartItem,
   updateCartItemQty,
 } = require("../../controllers/shop/cart-controller");
-const { authMiddleware } = require("../../controllers/auth/auth-controller");
+const { authenticate } = require("../../middlewares/auth");
 
 const router = express.Router();
 
-router.post("/add", authMiddleware ,addToCart);
-router.get("/get/:userId", authMiddleware ,fetchCartItems);
-router.put("/update-cart", authMiddleware ,updateCartItemQty);
-router.delete("/:userId/:productId", authMiddleware ,deleteCartItem);
+router.post("/add", authenticate ,addToCart);
+router.get("/get/:userId", authenticate ,fetchCartItems);
+router.put("/update-cart", authenticate ,updateCartItemQty);
+router.delete("/:userId/:productId", authenticate ,deleteCartItem);
 
 module.exports = router;
