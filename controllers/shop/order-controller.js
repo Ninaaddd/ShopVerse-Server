@@ -116,55 +116,119 @@ const createOrder = async (req, res) => {
 
 const capturePayment = async (req, res) => {
   try {
+    const userId = req.user.id;
     const { paymentId, payerId, orderId } = req.body;
 
-    let order = await Order.findById(orderId);
+    if (!paymentId || !payerId || !orderId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing payment details",
+      });
+    }
+
+    const order = await Order.findById(orderId);
 
     if (!order) {
       return res.status(404).json({
         success: false,
-        message: "Order can not be found",
+        message: "Order not found",
       });
     }
 
-    order.paymentStatus = "paid";
-    order.orderStatus = "confirmed";
-    order.paymentId = paymentId;
-    order.payerId = payerId;
-
-    for (let item of order.cartItems) {
-      let product = await Product.findById(item.productId);
-
-      if (!product) {
-        return res.status(404).json({
-          success: false,
-          message: `Not enough stock for this product ${product.title}`,
-        });
-      }
-
-      product.totalStock -= item.quantity;
-
-      await product.save();
+    // 1️⃣ Enforce ownership
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Not allowed to confirm this order",
+      });
     }
 
-    const getCartId = order.cartId;
-    await Cart.findByIdAndDelete(getCartId);
+    // 2️⃣ Prevent double capture
+    if (order.paymentStatus === "paid") {
+      return res.status(409).json({
+        success: false,
+        message: "Order already paid",
+      });
+    }
 
-    await order.save();
+    // 3️⃣ Verify payment with PayPal
+    paypal.payment.execute(
+      paymentId,
+      { payer_id: payerId },
+      async (error, payment) => {
+        if (error) {
+          console.error("PayPal execute error:", error);
+          return res.status(400).json({
+            success: false,
+            message: "Payment verification failed",
+          });
+        }
 
-    res.status(200).json({
-      success: true,
-      message: "Order confirmed",
-      data: order,
-    });
+        // 4️⃣ Validate PayPal state
+        if (payment.state !== "approved") {
+          return res.status(400).json({
+            success: false,
+            message: "Payment not approved",
+          });
+        }
+
+        const transaction = payment.transactions[0];
+        const paidAmount = Number(transaction.amount.total);
+        const paidCurrency = transaction.amount.currency;
+
+        // 5️⃣ Validate amount and currency
+        if (
+          paidCurrency !== "USD" ||
+          paidAmount !== Number(order.totalAmount.toFixed(2))
+        ) {
+          return res.status(400).json({
+            success: false,
+            message: "Payment amount mismatch",
+          });
+        }
+
+        // 6️⃣ Reduce stock (after verification only)
+        for (const item of order.cartItems) {
+          const product = await Product.findById(item.productId);
+
+          if (!product || product.totalStock < item.quantity) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for product`,
+            });
+          }
+
+          product.totalStock -= item.quantity;
+          await product.save();
+        }
+
+        // 7️⃣ Finalize order
+        order.paymentStatus = "paid";
+        order.orderStatus = "confirmed";
+        order.paymentId = paymentId;
+        order.payerId = payerId;
+        order.orderUpdateDate = new Date();
+
+        await order.save();
+
+        await Cart.findByIdAndDelete(order.cartId);
+
+        return res.status(200).json({
+          success: true,
+          message: "Order confirmed",
+          data: order,
+        });
+      }
+    );
   } catch (e) {
-    console.log(e);
-    res.status(500).json({
+    console.error(e);
+    return res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Internal server error",
     });
   }
 };
+
 
 const getAllOrdersByUser = async (req, res) => {
   try {
