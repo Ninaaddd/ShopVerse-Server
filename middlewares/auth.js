@@ -20,6 +20,7 @@ const authenticate = async (req, res, next) => {
       id: user._id.toString(),
       role: user.role,
       email: user.email,
+      userName: user.userName,
     };
 
     next();
