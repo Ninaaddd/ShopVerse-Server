@@ -8,6 +8,7 @@ const rateLimit = require("express-rate-limit");
 const authRouter = require("./routes/auth/auth-routes");
 const adminProductsRouter = require("./routes/admin/products-routes");
 const adminOrderRouter = require("./routes/admin/order-routes");
+const adminAccessRouter = require("./routes/admin/admin-routes");
 const shopProductsRouter = require("./routes/shop/products-routes");
 const shopCartRouter = require("./routes/shop/cart-routes");
 const shopAddressRouter = require("./routes/shop/address-routes");
@@ -88,6 +89,7 @@ app.use(globalLimiter);
 app.use(cookieParser());
 app.use(express.json());
 app.use("/api/auth", authRouter);
+app.use("/api/admin", adminAccessRouter);
 app.use("/api/admin/products", adminMiddleware, adminProductsRouter);
 app.use("/api/admin/orders", adminMiddleware, adminOrderRouter);
 
