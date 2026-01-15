@@ -9,13 +9,14 @@ const {
 } = require("../../controllers/admin/products-controller");
 
 const { upload } = require("../../helpers/cloudinary");
-const { authenticate } = require("../../middlewares/auth");
+const { authenticate, requireAdmin } = require("../../middlewares/auth");
 const { authorize } = require("../../middlewares/authorize");
 
 const router = express.Router();
 
 // All admin routes require authentication + admin role
 router.use(authenticate);
+router.use(requireAdmin);
 router.use(authorize("admin"));
 
 router.post("/upload-image", upload.single("my_file"), handleImageUpload);

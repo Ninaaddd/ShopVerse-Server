@@ -1,9 +1,12 @@
+// server/controllers/shop/cart-controller.js
 const Cart = require("../../models/Cart");
 const Product = require("../../models/Product");
 
 const addToCart = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    // ✅ Get userId from authenticated user, not from request body
+    const userId = req.user.id;
+    const { productId, quantity } = req.body;
 
     if (!userId || !productId || quantity <= 0) {
       return res.status(400).json({
@@ -53,12 +56,13 @@ const addToCart = async (req, res) => {
 
 const fetchCartItems = async (req, res) => {
   try {
-    const { userId } = req.params;
+    // ✅ Get userId from authenticated user instead of params
+    const userId = req.user.id;
 
     if (!userId) {
       return res.status(400).json({
         success: false,
-        message: "User id is manadatory!",
+        message: "User id is mandatory!",
       });
     }
 
@@ -110,7 +114,9 @@ const fetchCartItems = async (req, res) => {
 
 const updateCartItemQty = async (req, res) => {
   try {
-    const { userId, productId, quantity } = req.body;
+    // ✅ Get userId from authenticated user, not from request body
+    const userId = req.user.id;
+    const { productId, quantity } = req.body;
 
     if (!userId || !productId || quantity <= 0) {
       return res.status(400).json({
@@ -173,7 +179,10 @@ const updateCartItemQty = async (req, res) => {
 
 const deleteCartItem = async (req, res) => {
   try {
-    const { userId, productId } = req.params;
+    // ✅ Get userId from authenticated user instead of params
+    const userId = req.user.id;
+    const { productId } = req.params;
+    
     if (!userId || !productId) {
       return res.status(400).json({
         success: false,

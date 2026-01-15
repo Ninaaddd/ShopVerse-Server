@@ -29,4 +29,31 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate };
+// ✅ Add explicit admin middleware
+const requireAdmin = async (req, res, next) => {
+  try {
+    // User must be authenticated first
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized user!",
+      });
+    }
+
+    // ✅ Verify admin role from JWT token (not from request body!)
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied. Admin privileges required.",
+      });
+    }
+
+    next();
+  } catch (error) {
+    res.status(403).json({
+      success: false,
+      message: "Access denied.",
+    });
+  }
+};
+module.exports = { authenticate, requireAdmin };

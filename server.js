@@ -17,7 +17,8 @@ const shopSearchRouter = require("./routes/shop/search-routes");
 const shopReviewRouter = require("./routes/shop/review-routes");
 const commonFeatureRouter = require("./routes/common/feature-routes");
 
-const { adminMiddleware } = require("./controllers/admin/admin-middleware");
+// const { adminMiddleware } = require("./controllers/admin/admin-middleware");
+const { authenticate, requireAdmin } = require("./middlewares/auth")
 
 //create a database connection -> u can also
 //create a separate file for this and then import/use that file here
@@ -90,8 +91,8 @@ app.use(cookieParser());
 app.use(express.json());
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminAccessRouter);
-app.use("/api/admin/products", adminMiddleware, adminProductsRouter);
-app.use("/api/admin/orders", adminMiddleware, adminOrderRouter);
+app.use("/api/admin/products", authenticate, requireAdmin, adminProductsRouter);
+app.use("/api/admin/orders", authenticate, requireAdmin, adminOrderRouter);
 
 app.use("/api/shop/products", shopProductsRouter);
 app.use("/api/shop/cart", shopCartRouter);
