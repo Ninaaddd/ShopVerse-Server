@@ -1,3 +1,4 @@
+//server/controllers/shop/order-controller.js
 const paypal = require("../../helpers/paypal");
 const Order = require("../../models/Order");
 const Cart = require("../../models/Cart");
@@ -151,7 +152,7 @@ const createOrder = async (req, res) => {
         orderStatus: "pending",
         paymentMethod: "paypal",
         paymentStatus: "pending",
-        totalAmount: totalAmount, // ✅ Server-calculated total
+        totalAmount: totalAmount, // ✅ Expected amount (before payment)
         orderDate: new Date(),
         orderUpdateDate: new Date(),
       });
@@ -285,6 +286,11 @@ const capturePayment = async (req, res) => {
         order.orderStatus = "confirmed";
         order.paymentId = paymentId;
         order.payerId = payerId;
+        
+        // ✅ NEW: Store the actual amount paid via PayPal
+        order.paidAmount = paidAmount;
+        order.paidCurrency = paidCurrency;
+        
         order.orderUpdateDate = new Date();
 
         await order.save();
@@ -321,9 +327,17 @@ const getAllOrdersByUser = async (req, res) => {
       });
     }
 
+    // ✅ Transform orders to use paidAmount (actual PayPal amount) for display
+    const ordersWithPaidAmount = orders.map(order => ({
+      ...order.toObject(),
+      // Use paidAmount if available (for completed orders), otherwise totalAmount
+      displayAmount: order.paidAmount || order.totalAmount,
+      displayCurrency: order.paidCurrency || 'USD'
+    }));
+
     res.status(200).json({
       success: true,
-      data: orders,
+      data: ordersWithPaidAmount,
     });
   } catch (e) {
     console.error("Get orders error:", e);
@@ -356,9 +370,16 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
+    // ✅ Return order with actual paid amount for display
+    const orderWithPaidAmount = {
+      ...order.toObject(),
+      displayAmount: order.paidAmount || order.totalAmount,
+      displayCurrency: order.paidCurrency || 'USD'
+    };
+
     res.status(200).json({
       success: true,
-      data: order,
+      data: orderWithPaidAmount,
     });
   } catch (e) {
     console.error("Get order details error:", e);
