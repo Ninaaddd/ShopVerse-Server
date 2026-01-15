@@ -2,12 +2,15 @@ const Feature = require("../../models/Feature");
 
 const addFeatureImage = async (req, res) => {
   try {
-    const { image } = req.body;
+    const { image, linkType, linkValue } = req.body;
 
     console.log(image, "image");
+    console.log(linkType, linkValue, "link details");
 
     const featureImages = new Feature({
       image,
+      linkType: linkType || 'none',
+      linkValue: linkValue || null,
     });
 
     await featureImages.save();
