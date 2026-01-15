@@ -9,42 +9,94 @@ if (!FRONTEND_URL) {
   throw new Error("FRONTEND_URL is not defined in backend environment variables");
 }
 
-
 const createOrder = async (req, res) => {
   try {
     const userId = req.user?.id;
 
-    if (!userId) return res.status(401).json({ success:false, message: 'Unauthenticated' });
-
-    if (req.body.userId || req.body.cartItems || req.body.totalAmount) {
-  return res.status(400).json({ success: false, message: "Invalid payload" });
-  }
-
-
-    // Fetch cart server-side
-    const cart = await Cart.findOne({ userId }).populate('items.productId');
-    if (!cart || cart.items.length === 0) {
-      return res.status(400).json({ success:false, message: 'Cart is empty' });
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Unauthenticated' 
+      });
     }
 
-    // Build items list and compute total from DB product prices
-    const itemsForPaypal = cart.items.map(it => {
-      const prod = it.productId;
-      return {
-        name: prod.title,
-        sku: prod._id.toString(),
-        price: prod.price.toFixed(2),
-        currency: "USD",
-        quantity: it.quantity,
-      };
-    });
+    // 🚫 Reject any client-provided pricing data
+    if (req.body.userId || req.body.cartItems || req.body.totalAmount) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid payload" 
+      });
+    }
 
-    const totalAmount = cart.items.reduce((sum, it) => {
-      const price = Number(it.productId.price);
-      return sum + price * it.quantity;
-    }, 0);
+    // ✅ Fetch cart from database (source of truth)
+    const cart = await Cart.findOne({ userId }).populate('items.productId');
+    
+    if (!cart || cart.items.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Cart is empty' 
+      });
+    }
+
+    // ✅ Verify all products exist and have sufficient stock
+    for (const item of cart.items) {
+      if (!item.productId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid product in cart'
+        });
+      }
+
+      // Fetch fresh product data to ensure no stale cart data
+      const freshProduct = await Product.findById(item.productId._id);
+      
+      if (!freshProduct) {
+        return res.status(400).json({
+          success: false,
+          message: `Product ${item.productId.title} no longer exists`
+        });
+      }
+
+      if (freshProduct.totalStock < item.quantity) {
+        return res.status(400).json({
+          success: false,
+          message: `Insufficient stock for ${freshProduct.title}. Only ${freshProduct.totalStock} available.`
+        });
+      }
+
+      // Update cart item with fresh product data (in case prices changed)
+      item.productId = freshProduct;
+    }
+
+    // ✅ Calculate total from FRESH database prices (not cart prices)
+    let totalAmount = 0;
+    const itemsForPaypal = [];
+
+    for (const item of cart.items) {
+      const product = item.productId;
+      
+      // Use salePrice if available, otherwise regular price
+      const actualPrice = product.salePrice > 0 ? product.salePrice : product.price;
+      
+      totalAmount += actualPrice * item.quantity;
+
+      itemsForPaypal.push({
+        name: product.title,
+        sku: product._id.toString(),
+        price: actualPrice.toFixed(2),
+        currency: "USD",
+        quantity: item.quantity,
+      });
+    }
 
     const { addressInfo } = req.body;
+
+    if (!addressInfo || !addressInfo.address || !addressInfo.city) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid address information'
+      });
+    }
 
     const create_payment_json = {
       intent: "sale",
@@ -58,8 +110,12 @@ const createOrder = async (req, res) => {
       transactions: [
         {
           item_list: {
-            items: itemsForPaypal },
-          amount: { currency: "USD", total: totalAmount.toFixed(2) },
+            items: itemsForPaypal 
+          },
+          amount: { 
+            currency: "USD", 
+            total: totalAmount.toFixed(2) 
+          },
           description: `Order for user ${userId}`,
         },
       ],
@@ -67,49 +123,55 @@ const createOrder = async (req, res) => {
 
     paypal.payment.create(create_payment_json, async (error, paymentInfo) => {
       if (error) {
-        console.error(error);
-
+        console.error("PayPal create payment error:", error);
         return res.status(500).json({
           success: false,
           message: "Error while creating paypal payment",
         });
-      } 
-        
+      }
+
+      // ✅ Store order with server-calculated prices
       const newlyCreatedOrder = new Order({
         userId,
         cartId: cart._id,
-        cartItems: cart.items.map((it) => ({
-          productId: it.productId._id,
-          title: it.productId.title,
-          quantity: it.quantity,
-          price: it.productId.price,
-        })),
-          addressInfo,
-          orderStatus: "pending",
-          paymentMethod: "paypal",
-          paymentStatus: "pending",
-          totalAmount,
-          orderDate: new Date(),
-          orderUpdateDate: new Date(),
-        });
+        cartItems: cart.items.map((item) => {
+          const actualPrice = item.productId.salePrice > 0 
+            ? item.productId.salePrice 
+            : item.productId.price;
+          
+          return {
+            productId: item.productId._id,
+            title: item.productId.title,
+            quantity: item.quantity,
+            price: actualPrice, // ✅ Server-verified price
+          };
+        }),
+        addressInfo,
+        orderStatus: "pending",
+        paymentMethod: "paypal",
+        paymentStatus: "pending",
+        totalAmount: totalAmount, // ✅ Server-calculated total
+        orderDate: new Date(),
+        orderUpdateDate: new Date(),
+      });
 
-        await newlyCreatedOrder.save();
+      await newlyCreatedOrder.save();
 
-        const approvalURL = paymentInfo.links.find(
-          (link) => link.rel === "approval_url"
-        ).href;
+      const approvalURL = paymentInfo.links.find(
+        (link) => link.rel === "approval_url"
+      ).href;
 
-        return res.status(201).json({
-          success: true,
-          approvalURL,
-          orderId: newlyCreatedOrder._id,
-        });
+      return res.status(201).json({
+        success: true,
+        approvalURL,
+        orderId: newlyCreatedOrder._id,
+      });
     });
   } catch (e) {
-    console.log(e);
+    console.error("Create order error:", e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred!",
     });
   }
 };
@@ -176,28 +238,43 @@ const capturePayment = async (req, res) => {
         const paidAmount = Number(transaction.amount.total);
         const paidCurrency = transaction.amount.currency;
 
-        // 5️⃣ Validate amount and currency
-        if (
-          paidCurrency !== "USD" ||
-          paidAmount !== Number(order.totalAmount.toFixed(2))
-        ) {
+        // 5️⃣ ✅ CRITICAL: Validate amount matches server-calculated total
+        const expectedAmount = Number(order.totalAmount.toFixed(2));
+        
+        if (paidCurrency !== "USD") {
           return res.status(400).json({
             success: false,
-            message: "Payment amount mismatch",
+            message: "Invalid payment currency",
           });
         }
 
-        // 6️⃣ Reduce stock (after verification only)
+        if (Math.abs(paidAmount - expectedAmount) > 0.01) {
+          console.error(`Payment amount mismatch! Expected: ${expectedAmount}, Paid: ${paidAmount}`);
+          return res.status(400).json({
+            success: false,
+            message: "Payment amount mismatch. Please try again.",
+          });
+        }
+
+        // 6️⃣ ✅ Re-verify stock availability before finalizing
         for (const item of order.cartItems) {
           const product = await Product.findById(item.productId);
 
-          if (!product || product.totalStock < item.quantity) {
+          if (!product) {
             return res.status(400).json({
               success: false,
-              message: `Insufficient stock for product`,
+              message: `Product no longer available`,
             });
           }
 
+          if (product.totalStock < item.quantity) {
+            return res.status(400).json({
+              success: false,
+              message: `Insufficient stock for ${product.title}`,
+            });
+          }
+
+          // ✅ Reduce stock atomically
           product.totalStock -= item.quantity;
           await product.save();
         }
@@ -211,6 +288,7 @@ const capturePayment = async (req, res) => {
 
         await order.save();
 
+        // Clean up cart after successful payment
         await Cart.findByIdAndDelete(order.cartId);
 
         return res.status(200).json({
@@ -221,7 +299,7 @@ const capturePayment = async (req, res) => {
       }
     );
   } catch (e) {
-    console.error(e);
+    console.error("Capture payment error:", e);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -229,12 +307,11 @@ const capturePayment = async (req, res) => {
   }
 };
 
-
 const getAllOrdersByUser = async (req, res) => {
   try {
     const userId = req.user?.id;
 
-    const orders = await Order.find({ userId });
+    const orders = await Order.find({ userId }).sort({ orderDate: -1 });
 
     if (!orders.length) {
       return res.status(404).json({
@@ -248,16 +325,17 @@ const getAllOrdersByUser = async (req, res) => {
       data: orders,
     });
   } catch (e) {
-    console.log(e);
+    console.error("Get orders error:", e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred!",
     });
   }
 };
 
 const getOrderDetails = async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { id } = req.params;
 
     const order = await Order.findById(id);
@@ -269,15 +347,23 @@ const getOrderDetails = async (req, res) => {
       });
     }
 
+    // ✅ Verify ownership
+    if (order.userId.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view this order",
+      });
+    }
+
     res.status(200).json({
       success: true,
       data: order,
     });
   } catch (e) {
-    console.log(e);
+    console.error("Get order details error:", e);
     res.status(500).json({
       success: false,
-      message: "Some error occured!",
+      message: "Some error occurred!",
     });
   }
 };
