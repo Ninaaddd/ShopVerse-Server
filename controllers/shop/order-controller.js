@@ -20,11 +20,21 @@ const createOrder = async (req, res) => {
       });
     }
 
+    // ✅ Extract addressInfo first
+    const { orderData } = req.body;
+
+    if (!orderData.addressInfo || !orderData.addressInfo.address || !orderData.addressInfo.city) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid address information'
+      });
+    }
+
     // 🚫 Reject any client-provided pricing data
     if (req.body.userId || req.body.cartItems || req.body.totalAmount) {
       return res.status(400).json({ 
         success: false, 
-        message: "Invalid payload" 
+        message: "Invalid payload - do not send pricing data" 
       });
     }
 
@@ -89,15 +99,6 @@ const createOrder = async (req, res) => {
       });
     }
 
-    const { addressInfo } = req.body;
-
-    if (!addressInfo || !addressInfo.address || !addressInfo.city) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid address information'
-      });
-    }
-
     const create_payment_json = {
       intent: "sale",
       payer: {
@@ -146,7 +147,7 @@ const createOrder = async (req, res) => {
             price: actualPrice, // ✅ Server-verified price
           };
         }),
-        addressInfo,
+        orderData,
         orderStatus: "pending",
         paymentMethod: "paypal",
         paymentStatus: "pending",
