@@ -2,13 +2,19 @@ const mongoose = require("mongoose");
 
 const FeatureSchema = new mongoose.Schema(
   {
-    image: String,
-    linkType: {
+    image: {
       type: String,
-      enum: ['category', 'brand', 'none'],
-      default: 'none'
+      required: true
     },
-    linkValue: String, // The category or brand value
+    categories: [{
+      type: String,
+      enum: ['men', 'women', 'kids', 'accessories', 'footwear']
+    }],
+    brand: {
+      type: String,
+      enum: ['nike', 'adidas', 'puma', 'levi', 'zara', 'h&m', null],
+      default: null
+    }
   },
   { timestamps: true }
 );
