@@ -1,4 +1,3 @@
-```md
 # 🛠️ Shopverse Server — Backend API for Shopverse E-Commerce Platform
 
 Shopverse Server is the **backend REST API** powering the Shopverse e-commerce platform.  
@@ -17,8 +16,8 @@ The frontend lives in a separate repository: **Shopverse (Frontend)**.
 
 ## 🧠 Architecture Overview
 
-```
 
+```
 Shopverse Server
 │
 ├── Node.js + Express
@@ -28,10 +27,10 @@ Shopverse Server
 ├── Rate Limiting & Security Middleware
 ├── Modular Route Structure
 └── REST API consumed by Shopverse Frontend
-
 ```
 
-The backend is designed to be **stateless**, **secure**, and **scalable**, making it suitable for cloud deployment.
+
+The backend is designed to be stateless, secure, and scalable, making it suitable for cloud deployment.
 
 ---
 
@@ -109,7 +108,7 @@ server/
 ├── server.js
 └── .env
 
-````
+```
 
 ---
 
@@ -235,11 +234,5 @@ The frontend consumes this API for:
 * Centralized logging
 * API documentation (OpenAPI / Swagger)
 * Admin audit logs
-
----
-
-## 🧑‍💻 Author
-
-**Ninad**
 
 ---
